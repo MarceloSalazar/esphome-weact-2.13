@@ -14,5 +14,27 @@ esp8266:
 logger:
   level: DEBUG
 
+spi:
+  clk_pin: GPIO14
+  mosi_pin: GPIO13
+
+font:
+  - file: "gfonts://Roboto"
+    id: font_main
+    size: 20
+
+display:
+  - platform: epaper_spi
+    id: eink_display
+    model: weact-2.13in-3c
+    cs_pin: GPIO15
+    dc_pin: GPIO4
+    busy_pin: GPIO16
+    reset_pin: GPIO5
+    rotation: 90
+    update_interval: ${display_refresh_interval}
+    lambda: |-
+      it.print(10, 10, id(font_main), Color::BLACK, "Hola mundo!");
+
 # La conexión WiFi/API/Home Assistant se añade en una fase posterior
 # (ver docs/superpowers/specs/2026-09-17-esphome-weact-display-design.md).
