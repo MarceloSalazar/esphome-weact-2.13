@@ -1,0 +1,18 @@
+substitutions:
+  device_name: "weact-display"
+  display_refresh_interval: "60s"
+
+esphome:
+  name: ${device_name}
+  friendly_name: WeAct E-ink Display
+
+esp8266:
+  board: nodemcuv2
+  framework:
+    version: recommended
+
+logger:
+  level: DEBUG
+
+# La conexión WiFi/API/Home Assistant se añade en una fase posterior
+# (ver docs/superpowers/specs/2026-09-17-esphome-weact-display-design.md).

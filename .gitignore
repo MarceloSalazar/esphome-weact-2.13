@@ -1,0 +1,12 @@
+# Secrets — never commit real credentials
+secrets.yaml
+
+# ESPHome / PlatformIO build artifacts
+.esphome/
+.pio/
+
+# Python virtual environment
+.venv/
+
+# Editor/OS cruft
+.DS_Store
