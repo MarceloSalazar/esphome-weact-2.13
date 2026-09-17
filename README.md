@@ -83,5 +83,5 @@ de este repositorio.
 - [x] Logs legibles por el monitor serie
 - [x] Wiring físico del panel e-ink
 - [x] "Hola mundo!" en el panel e-ink
-- [ ] Conexión WiFi (`LMx`)
+- [x] Conexión WiFi (`LMT`, IP estática) + OTA
 - [ ] Integración con Home Assistant (consumo de la vivienda en vatios)
