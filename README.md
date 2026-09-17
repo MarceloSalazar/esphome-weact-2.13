@@ -4,9 +4,28 @@ Prueba de concepto: integración de un módulo ESP8266 y una pantalla
 e-ink WeAct 2.13" tricolor (Black/White/Red) con Home Assistant, usando
 ESPHome.
 
-El dispositivo final muestra el consumo eléctrico de la vivienda (en
-vatios), leído desde un sensor existente de Home Assistant, actualizando
-la pantalla al menos cada minuto.
+El dispositivo muestra, actualizando cada 5 minutos:
+
+```
+Fecha: dd/mm/aaaa - Hora: hh:mm
+Bateria: xx% / xx.xV / [+,-]xxxxW
+Consumo vivienda: xxxxW
+```
+
+Datos leídos de Home Assistant (instalación Victron ESS/MultiPlus II +
+Shelly EM del proyecto [HEMS](https://github.com/MarceloSalazar/hems)):
+
+| Campo | Entidad de Home Assistant |
+|---|---|
+| Batería % | `sensor.victron_system_battery_soc` |
+| Batería V | `sensor.victron_system_battery_voltage` |
+| Batería W (signo: + carga, - descarga) | `sensor.garage_settings_battery_power_avg_5min` (helper *Statistics*, media lineal 5 min sobre `sensor.victron_system_battery_power`) |
+| Consumo vivienda W | `sensor.entrance_shellyem_c45bbee19932_channel_1_consumo_vivienda_avg_5min` (helper *Statistics*, media lineal 5 min sobre el Shelly EM de acometida) |
+
+Los dos sensores de media de 5 minutos son *Helpers* creados desde la UI
+de Home Assistant (Ajustes → Dispositivos y Servicios → Ayudantes →
+Estadística), no YAML — así no se toca la configuración de producción
+de HEMS.
 
 Diseño completo: [docs/superpowers/specs/2026-09-17-esphome-weact-display-design.md](docs/superpowers/specs/2026-09-17-esphome-weact-display-design.md).
 
@@ -83,5 +102,5 @@ de este repositorio.
 - [x] Logs legibles por el monitor serie
 - [x] Wiring físico del panel e-ink
 - [x] "Hola mundo!" en el panel e-ink
-- [x] Conexión WiFi (`LMT`, IP estática) + OTA
-- [ ] Integración con Home Assistant (consumo de la vivienda en vatios)
+- [x] Conexión WiFi (`LMT`, IP estática) + OTA (cifrado)
+- [x] Integración con Home Assistant (batería + consumo de la vivienda)

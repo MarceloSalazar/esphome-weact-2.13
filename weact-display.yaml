@@ -1,6 +1,6 @@
 substitutions:
   device_name: "weact-display"
-  display_refresh_interval: "60s"
+  display_refresh_interval: "5min"
 
 esphome:
   name: ${device_name}
@@ -25,7 +25,29 @@ wifi:
 
 ota:
   - platform: esphome
-    password: !secret ota_password
+    encryption:
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+time:
+  - platform: homeassistant
+    id: ha_time
+
+sensor:
+  - platform: homeassistant
+    id: battery_soc
+    entity_id: sensor.victron_system_battery_soc
+  - platform: homeassistant
+    id: battery_voltage
+    entity_id: sensor.victron_system_battery_voltage
+  - platform: homeassistant
+    id: battery_power_avg
+    entity_id: sensor.garage_settings_battery_power_avg_5min
+  - platform: homeassistant
+    id: house_consumption_avg
+    entity_id: sensor.entrance_shellyem_c45bbee19932_channel_1_consumo_vivienda_avg_5min
 
 spi:
   clk_pin: GPIO14
@@ -47,7 +69,9 @@ display:
     rotation: 90
     update_interval: ${display_refresh_interval}
     lambda: |-
-      it.print(10, 10, id(font_main), Color::BLACK, "Hola mundo!");
-
-# La integración con Home Assistant (fase 8) se añade en una fase posterior
-# (ver docs/superpowers/specs/2026-09-17-esphome-weact-display-design.md).
+      it.print(4, 6, id(font_main), Color::BLACK,
+               id(ha_time).now().strftime("Fecha: %d/%m/%Y - Hora: %H:%M").c_str());
+      it.printf(4, 46, id(font_main), Color::BLACK, "Bateria: %.0f%% / %.1fV / %+.0fW",
+                id(battery_soc).state, id(battery_voltage).state, id(battery_power_avg).state);
+      it.printf(4, 86, id(font_main), Color::BLACK, "Consumo vivienda: %.0fW",
+                id(house_consumption_avg).state);
