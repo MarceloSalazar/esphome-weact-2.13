@@ -14,6 +14,19 @@ esp8266:
 logger:
   level: DEBUG
 
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip:
+    static_ip: 192.168.2.211
+    gateway: 192.168.2.1
+    subnet: 255.255.255.0
+    dns1: 192.168.2.1
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
 spi:
   clk_pin: GPIO14
   mosi_pin: GPIO13
@@ -36,5 +49,5 @@ display:
     lambda: |-
       it.print(10, 10, id(font_main), Color::BLACK, "Hola mundo!");
 
-# La conexión WiFi/API/Home Assistant se añade en una fase posterior
+# La integración con Home Assistant (fase 8) se añade en una fase posterior
 # (ver docs/superpowers/specs/2026-09-17-esphome-weact-display-design.md).
