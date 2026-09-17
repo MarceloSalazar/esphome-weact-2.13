@@ -18,16 +18,19 @@ Diseño completo: [docs/superpowers/specs/2026-09-17-esphome-weact-display-desig
 
 ### Wiring (bus SPI hardware)
 
-| Señal e-ink | GPIO ESP8266 | Pin NodeMCU |
-|---|---|---|
-| CS   | GPIO15 | D8 |
-| SCK  | GPIO14 | D5 |
-| MOSI | GPIO13 | D7 |
-| BUSY | GPIO16 | D0 |
-| RST  | GPIO5  | D1 |
-| DC   | GPIO4  | D2 |
-| VCC  | 3V3 | 3V3 |
-| GND  | GND | GND |
+El módulo WeAct etiqueta los pines SPI con nombres de I2C (`SCL`/`SDA`)
+aunque el bus es SPI, no I2C: `SCL` = SCK (clock), `SDA` = MOSI (data).
+
+| Pin en el módulo (silkscreen) | Señal SPI | GPIO ESP8266 | Pin NodeMCU |
+|---|---|---|---|
+| CS   | CS   | GPIO15 | D8 |
+| SCL  | SCK  | GPIO14 | D5 |
+| SDA  | MOSI | GPIO13 | D7 |
+| BUSY | BUSY | GPIO16 | D0 |
+| RES  | RST  | GPIO5  | D1 |
+| D/C  | DC   | GPIO4  | D2 |
+| VCC  | VCC  | 3V3 | 3V3 |
+| GND  | GND  | GND | GND |
 
 ## Software
 
