@@ -81,7 +81,7 @@ de este repositorio.
 - [x] ESP8266 detectado por USB
 - [x] Firmware básico compilado y flasheado
 - [x] Logs legibles por el monitor serie
-- [ ] Wiring físico del panel e-ink
-- [ ] "Hola mundo!" en el panel e-ink
+- [x] Wiring físico del panel e-ink
+- [x] "Hola mundo!" en el panel e-ink
 - [ ] Conexión WiFi (`LMx`)
 - [ ] Integración con Home Assistant (consumo de la vivienda en vatios)
