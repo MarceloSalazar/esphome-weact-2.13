@@ -34,20 +34,67 @@ api:
 time:
   - platform: homeassistant
     id: ha_time
+    on_time_sync:
+      then:
+        - script.execute: refresh_when_ready
+
+globals:
+  - id: initial_refresh_done
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+
+script:
+  - id: refresh_when_ready
+    then:
+      - lambda: |-
+          if (id(initial_refresh_done)) return;
+          bool ready = id(ha_time).now().is_valid() &&
+              !isnan(id(battery_soc).state) && !isnan(id(battery_voltage).state) &&
+              !isnan(id(battery_power_avg).state) && !isnan(id(house_consumption_avg).state);
+          if (ready) {
+            id(initial_refresh_done) = true;
+            id(eink_display).update();
+          }
 
 sensor:
   - platform: homeassistant
     id: battery_soc
     entity_id: sensor.victron_system_battery_soc
+    on_value:
+      then:
+        - script.execute: refresh_when_ready
   - platform: homeassistant
     id: battery_voltage
     entity_id: sensor.victron_system_battery_voltage
+    on_value:
+      then:
+        - script.execute: refresh_when_ready
   - platform: homeassistant
     id: battery_power_avg
     entity_id: sensor.garage_settings_battery_power_avg_5min
+    on_value:
+      then:
+        - script.execute: refresh_when_ready
   - platform: homeassistant
     id: house_consumption_avg
     entity_id: sensor.entrance_shellyem_c45bbee19932_channel_1_consumo_vivienda_avg_5min
+    on_value:
+      then:
+        - script.execute: refresh_when_ready
+
+# Refresco periódico. El propio update_interval del display queda en
+# "never" (ver más abajo) para que el único disparador automático sea
+# este. ESPHome dispara la primera ejecución de un interval casi de
+# inmediato al arrancar (no espera el intervalo completo) — con
+# startup_delay igual al intervalo, ese primer disparo automático se
+# retrasa 5 min y nunca compite con el refresco inmediato de
+# refresh_when_ready (que gana la carrera en <1s tras arrancar).
+interval:
+  - interval: ${display_refresh_interval}
+    startup_delay: ${display_refresh_interval}
+    then:
+      - component.update: eink_display
 
 spi:
   clk_pin: GPIO14
@@ -56,7 +103,7 @@ spi:
 font:
   - file: "gfonts://Roboto"
     id: font_main
-    size: 20
+    size: 16
 
 display:
   - platform: epaper_spi
@@ -67,11 +114,46 @@ display:
     busy_pin: GPIO16
     reset_pin: GPIO5
     rotation: 90
-    update_interval: ${display_refresh_interval}
+    update_interval: never
     lambda: |-
-      it.print(4, 6, id(font_main), Color::BLACK,
-               id(ha_time).now().strftime("Fecha: %d/%m/%Y - Hora: %H:%M").c_str());
-      it.printf(4, 46, id(font_main), Color::BLACK, "Bateria: %.0f%% / %.1fV / %+.0fW",
-                id(battery_soc).state, id(battery_voltage).state, id(battery_power_avg).state);
-      it.printf(4, 86, id(font_main), Color::BLACK, "Consumo vivienda: %.0fW",
-                id(house_consumption_avg).state);
+      auto ha_now = id(ha_time).now();
+      bool data_ready = ha_now.is_valid() &&
+          !isnan(id(battery_soc).state) && !isnan(id(battery_voltage).state) &&
+          !isnan(id(battery_power_avg).state) && !isnan(id(house_consumption_avg).state);
+      if (!data_ready) {
+        // Recién arrancado: aún no llegaron hora/valores de Home Assistant.
+        // Se evita dibujar "nan"/1970; refresh_when_ready() forzará un
+        // redibujado en cuanto lleguen, sin esperar el próximo ciclo.
+        it.print(4, 50, id(font_main), Color::BLACK, "Conectando con Home Assistant...");
+        return;
+      }
+
+      Color red(0xFF, 0x00, 0x00);
+      char buf[24];
+      // Dibuja "text" en (x, y) con "color" y avanza x lo que ocupó, para
+      // poder concatenar tramos de distinto color en la misma línea.
+      auto draw_segment = [&](int &x, int y, Color color, const char *text) {
+        int x1, y1, w, h;
+        it.get_text_bounds(x, y, text, id(font_main), TextAlign::TOP_LEFT, &x1, &y1, &w, &h);
+        it.print(x, y, id(font_main), color, text);
+        x = x1 + w;  // x1 ya es la x absoluta (alineación LEFT), no un offset relativo
+      };
+
+      it.print(4, 10, id(font_main), Color::BLACK,
+               ha_now.strftime("%d/%m/%Y - %H:%M").c_str());
+
+      int x2 = 4;
+      snprintf(buf, sizeof(buf), "Bateria: %.1f", id(battery_soc).state);
+      draw_segment(x2, 50, Color::BLACK, buf);
+      draw_segment(x2, 50, red, "%");
+      snprintf(buf, sizeof(buf), " %.1f", id(battery_voltage).state);
+      draw_segment(x2, 50, Color::BLACK, buf);
+      draw_segment(x2, 50, red, "V");
+      snprintf(buf, sizeof(buf), " %+.0f", id(battery_power_avg).state);
+      draw_segment(x2, 50, Color::BLACK, buf);
+      draw_segment(x2, 50, red, "W");
+
+      int x3 = 4;
+      snprintf(buf, sizeof(buf), "Consumo Red: %.0f", id(house_consumption_avg).state);
+      draw_segment(x3, 90, Color::BLACK, buf);
+      draw_segment(x3, 90, red, "W");
