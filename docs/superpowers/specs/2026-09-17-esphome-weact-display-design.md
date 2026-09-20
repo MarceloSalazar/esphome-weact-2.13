@@ -1,49 +1,52 @@
-# Diseño: ESP8266 + WeAct 2.13" e-ink (B&W&R) + Home Assistant
+# Design: ESP8266 + WeAct 2.13" e-ink (B&W&R) + Home Assistant
 
-Fecha: 2026-09-17
-Estado: aprobado por el usuario, pendiente de implementación
+Date: 2026-09-17
+Status: approved by the user at the time, since implemented and
+extended — see [README.md](../../../README.md) for the current,
+as-built design (the battery status + grid consumption display shown
+there superseded the original "house consumption only" goal below).
 
-## Objetivo
+## Goal
 
-Probar la integración y el funcionamiento de dos componentes con Home
-Assistant, usando ESPHome:
+Test the integration and behavior of two components with Home
+Assistant, using ESPHome:
 
-1. Un módulo ESP8266 (tipo NodeMCU) conectado por USB.
-2. Un módulo e-ink WeAct 2.13" tricolor (Black/White/Red).
+1. An ESP8266 module (NodeMCU-type) connected over USB.
+2. A WeAct 2.13" tricolor e-ink module (Black/White/Red).
 
-El resultado final es un dispositivo ESPHome que muestra el consumo
-eléctrico de la vivienda (en vatios) leído desde un sensor existente de
-Home Assistant, actualizando la pantalla al menos cada minuto.
+The end result is an ESPHome device that shows the household's power
+consumption (in watts), read from an existing Home Assistant sensor,
+updating the screen at least once a minute.
 
-Este es un proyecto de prueba de concepto (PoC), no un despliegue de
-producción: se prioriza validar que la integración funciona end-to-end
-sobre la robustez a largo plazo.
+This is a proof-of-concept (PoC) project, not a production deployment:
+validating that the integration works end-to-end is prioritized over
+long-term robustness.
 
 ## Hardware
 
 ### ESP8266
 
-- Placa tipo NodeMCU (modelo exacto por confirmar cuando se detecte por
-  USB — ver "Decisiones pendientes").
-- Framework: Arduino (vía ESPHome, plataforma `esp8266:`).
-- GPIOs utilizables sin restricciones de boot: GPIO4, GPIO5, GPIO12,
-  GPIO13, GPIO14, GPIO16. Se evitan GPIO0/2/15 (modo de arranque),
-  GPIO1/3 (UART), GPIO6-11 (flash interno).
+- NodeMCU-type board (exact model to confirm once detected over
+  USB — see "Open decisions").
+- Framework: Arduino (via ESPHome's `esp8266:` platform).
+- GPIOs usable without boot restrictions: GPIO4, GPIO5, GPIO12,
+  GPIO13, GPIO14, GPIO16. Avoided: GPIO0/2/15 (boot mode), GPIO1/3
+  (UART), GPIO6-11 (internal flash).
 
-### Panel e-ink WeAct 2.13" B&W&R
+### WeAct 2.13" B&W&R e-ink panel
 
-- Controlador: SSD1680.
-- Panel: GDEY0213Z98, 122×250 píxeles, tricolor (negro/blanco/rojo).
-- Solo soporta refresco completo (sin refresco parcial confiable) — un
-  ciclo de refresco completo tarda ~15-20s y produce parpadeo visible.
-- Fuente: ejemplo oficial de WeAct para ESP8266
+- Controller: SSD1680.
+- Panel: GDEY0213Z98, 122×250 pixels, tricolor (black/white/red).
+- Only supports full refresh (no reliable partial refresh) — a full
+  refresh cycle takes ~15-20s and causes visible flicker.
+- Source: WeAct's official ESP8266 example
   (`WeActStudio.EpaperModule/Example/EpaperModuleTest_Arduino_ESP8266`)
-  y hoja de datos SSD1680 incluida en el mismo repositorio
+  and the SSD1680 datasheet included in the same repository
   (`Doc/SSD1680_Datasheet.pdf`).
 
-### Wiring propuesto (SPI hardware del ESP8266)
+### Proposed wiring (ESP8266 hardware SPI)
 
-| Señal e-ink | GPIO ESP8266 | Pin NodeMCU (referencia) |
+| E-ink signal | ESP8266 GPIO | NodeMCU pin (reference) |
 |---|---|---|
 | CS   | GPIO15 | D8 |
 | SCK/CLK | GPIO14 | D5 |
@@ -54,157 +57,155 @@ sobre la robustez a largo plazo.
 | VCC  | 3V3 | 3V3 |
 | GND  | GND | GND |
 
-Se usa el bus SPI hardware (HSPI: GPIO12/13/14) para CLK/MOSI, tal como
-recomienda el fabricante en su propio ejemplo — evita SPI por software
-y es más fiable a la velocidad de refresco del panel. MISO (GPIO12) no
-se usa (el panel no lo requiere) pero queda reservado por si el futuro
-componente SPI de ESPHome lo pide en la configuración del bus.
+Uses the ESP8266's hardware SPI bus (HSPI: GPIO12/13/14) for CLK/MOSI,
+as recommended in the manufacturer's own example — avoids software SPI
+and is more reliable at the panel's refresh speed. MISO (GPIO12) isn't
+used (the panel doesn't need it) but stays reserved in case a future
+ESPHome SPI component requires it in the bus configuration.
 
-GPIO15 (CS) requiere estar en LOW durante el arranque para no interferir
-con el modo de boot; al ser una salida controlada activamente por SPI,
-no supone un problema en la práctica, pero se documenta como punto de
-atención si aparecen arranques erráticos.
+GPIO15 (CS) needs to be LOW during boot so it doesn't interfere with
+boot mode selection; since it's an output actively driven by SPI, this
+isn't an issue in practice, but it's documented here as something to
+watch if erratic boots show up.
 
 ## Software
 
-- **ESPHome** (CLI + YAML), instalado vía `pip`/entorno virtual Python.
-  Versión mínima: la que incluya el componente `epaper_spi` con el
-  modelo `weact-2.13in-3c` — disponible desde la release **2026.9.0**
-  (publicada 2026-09-16). No usar versiones anteriores a febrero 2026.
-- **PlatformIO**: usado internamente por ESPHome para compilar el
-  firmware; no se escribe código Arduino/PlatformIO a mano. Se instala
-  como dependencia del entorno, y la extensión de VSCode de PlatformIO
-  se usa solo como apoyo (monitor serie, exploración del build), no
-  como flujo de compilación principal.
-- **Extensión ESPHome para VSCode**: resaltado de sintaxis y validación
-  de YAML.
-- Encoding de color de ESPHome para el display: `platform: epaper_spi`,
-  `model: weact-2.13in-3c` (NO usar `waveshare_epaper`, que no soporta
-  esta variante tricolor de 2.13").
+- **ESPHome** (CLI + YAML), installed via `pip`/a Python virtual
+  environment. Minimum version: whichever includes the `epaper_spi`
+  component with the `weact-2.13in-3c` model — available since release
+  **2026.9.0** (published 2026-09-16). Don't use versions older than
+  February 2026.
+- **PlatformIO**: used internally by ESPHome to compile the firmware;
+  no Arduino/PlatformIO code is written by hand. Installed as an
+  environment dependency; the PlatformIO VSCode extension is only used
+  as a helper (serial monitor, browsing the build), not as the main
+  compile flow.
+- **ESPHome VSCode extension**: YAML syntax highlighting and
+  validation.
+- ESPHome display platform for this panel: `platform: epaper_spi`,
+  `model: weact-2.13in-3c` (do NOT use `waveshare_epaper`, which
+  doesn't support this tricolor 2.13" variant).
 
-## Estructura del repositorio
+## Repository structure
 
 ```
 esphome-weact-2.13/
-├── README.md              # documentación principal del proyecto
-├── CLAUDE.md               # convenciones para trabajar con Claude Code
-├── .gitignore               # excluye secrets.yaml, .esphome/, .pio/
-├── secrets.yaml             # WiFi password, etc. (NO se commitea)
-├── secrets.yaml.example     # plantilla de secrets.yaml, sí se commitea
-└── weact-display.yaml       # configuración ESPHome única
+├── README.md              # main project documentation
+├── CLAUDE.md               # conventions for working with Claude Code
+├── .gitignore               # excludes secrets.yaml, .esphome/, .pio/
+├── secrets.yaml             # WiFi password, etc. (NOT committed)
+├── secrets.yaml.example     # secrets.yaml template, committed
+└── weact-display.yaml       # single ESPHome config
 ```
 
-Un solo archivo YAML de ESPHome: es un único dispositivo con un único
-propósito. No se introduce `packages:` ni separación en múltiples
-archivos — se reconsiderará solo si el proyecto crece a más de un
-dispositivo o pantalla.
+A single ESPHome YAML file: this is one device with one purpose. No
+`packages:` or split into multiple files — only reconsider this if the
+project grows to more than one device or display.
 
-## Configuración ESPHome (componentes clave)
+## ESPHome configuration (key components)
 
-- `esphome:` — nombre del dispositivo, `substitutions:` para valores
-  configurables (ver más abajo).
-- `esp8266:` — `board:` (a confirmar), `framework: arduino`.
-- `spi:` — bus SPI hardware, `clk_pin: GPIO14`, `mosi_pin: GPIO13`.
+- `esphome:` — device name, `substitutions:` for configurable values
+  (see below).
+- `esp8266:` — `board:` (to confirm), `framework: arduino`.
+- `spi:` — hardware SPI bus, `clk_pin: GPIO14`, `mosi_pin: GPIO13`.
 - `display:`
   - `platform: epaper_spi`
   - `model: weact-2.13in-3c`
-  - `cs_pin`, `dc_pin`, `busy_pin`, `reset_pin` según tabla de wiring.
-  - `update_interval:` controlado por substitution (ver estrategia de
-    refresco).
-  - `full_update_every:` para forzar limpieza periódica y evitar
-    ghosting (valor exacto a ajustar empíricamente, punto de partida:
-    cada 30 refrescos).
-- `wifi:` — `ssid: "LMx"`, `password: !secret wifi_password`.
-- `api:` — API nativa de ESPHome; Home Assistant descubre el
-  dispositivo por mDNS, sin necesidad de token manual.
-- `logger:` — salida por UART (hardware_uart: UART0), para depuración
-  por puerto serie.
+  - `cs_pin`, `dc_pin`, `busy_pin`, `reset_pin` per the wiring table.
+  - `update_interval:` controlled by a substitution (see refresh
+    strategy).
+  - `full_update_every:` to force a periodic clean and avoid ghosting
+    (exact value to tune empirically, starting point: every 30
+    refreshes).
+- `wifi:` — `ssid` and `password: !secret wifi_password`.
+- `api:` — ESPHome's native API; Home Assistant discovers the device
+  via mDNS, no manual token needed.
+- `logger:` — UART output (hardware_uart: UART0), for serial-port
+  debugging.
 - `sensor:` — `platform: homeassistant`, `entity_id:` (placeholder
-  hasta que se confirme el sensor real de consumo de la vivienda),
-  con un filtro `throttle` para no redibujar más de una vez por
-  intervalo configurado.
+  until the real house-consumption sensor is confirmed), with a
+  `throttle` filter so the screen doesn't redraw more than once per
+  configured interval.
 
-### Substitutions propuestas
+### Proposed substitutions
 
 ```yaml
 substitutions:
-  display_refresh_interval: "60s"   # "configurable a futuro", punto 1
-  power_entity_id: "sensor.PENDIENTE_consumo_vivienda"
+  display_refresh_interval: "60s"   # "configurable later", item 1
+  power_entity_id: "sensor.TBD_house_consumption"
 ```
 
-## Flujo de datos
+## Data flow
 
-1. El sensor de potencia ya existe en Home Assistant (integración de
-   medición de consumo, aún sin identificar — ver decisiones
-   pendientes).
-2. HA empuja el valor al ESP8266 vía la API nativa de ESPHome cada vez
-   que el estado del sensor cambia (push, no polling).
-3. Un filtro `throttle: ${display_refresh_interval}` en el sensor
-   limita cuántas veces por minuto se dispara la actualización de
-   pantalla.
-4. Solo si el valor mostrado cambia (redondeo a vatios enteros, por
-   ejemplo) se dispara un refresco completo del e-ink.
-5. El e-ink permanece con la última imagen dibujada entre refrescos
-   (comportamiento nativo de e-ink, no requiere lógica adicional).
+1. The power sensor already exists in Home Assistant (a consumption
+   measurement integration, not yet identified — see open decisions).
+2. HA pushes the value to the ESP8266 over ESPHome's native API
+   whenever the sensor's state changes (push, not polling).
+3. A `throttle: ${display_refresh_interval}` filter on the sensor
+   limits how often per minute the screen update is triggered.
+4. A full e-ink refresh only fires if the displayed value actually
+   changes (e.g. rounded to whole watts).
+5. The e-ink keeps showing the last drawn image between refreshes
+   (native e-ink behavior, no extra logic needed).
 
-## Manejo de errores
+## Error handling
 
-- **WiFi caído**: reconexión automática nativa de ESPHome. No se
-  sobreescribe la última imagen válida en el e-ink.
-- **API/HA caída**: reconexión automática nativa de `api:`. El filtro
-  del sensor ignora valores `NaN`/desconocidos, evitando redibujar con
-  datos basura o "unavailable".
-- **Ghosting del panel**: mitigado con `full_update_every`.
-- **Fallo de compilación/flash**: se valida en cada fase con
-  `esphome compile` y `esphome upload` antes de dar la fase por
-  cerrada (ver plan de fases).
+- **WiFi down**: ESPHome's native auto-reconnect. The last valid image
+  on the e-ink isn't overwritten.
+- **API/HA down**: `api:`'s native auto-reconnect. The sensor filter
+  ignores `NaN`/unknown values, avoiding a redraw with garbage or
+  "unavailable" data.
+- **Panel ghosting**: mitigated with `full_update_every`.
+- **Compile/flash failure**: validated at each phase with
+  `esphome compile` and `esphome upload` before considering the phase
+  done (see the phase plan).
 
-## Pruebas y validación
+## Testing and validation
 
-No hay tests automatizados tradicionales en un proyecto ESPHome — la
-validación es por fases, cada una con su propio criterio de "hecho":
+There are no traditional automated tests in an ESPHome project —
+validation happens phase by phase, each with its own "done" criteria:
 
-1. Entorno (PlatformIO + ESPHome instalados y funcionando).
-2. ESP8266 detectado por USB (puerto serie visible).
-3. Firmware básico compilado y flasheado con éxito.
-4. Logs legibles por el monitor serie de ESPHome.
-5. Wiring físico documentado y validado con continuidad/multímetro si
-   hace falta.
-6. Texto "Hola mundo!" visible en el panel e-ink.
-7. Dispositivo conectado a la red WiFi `LMx`.
-8. Valor de consumo de HA visible en el panel, actualizando según la
-   estrategia de refresco definida.
+1. Environment (PlatformIO + ESPHome installed and working).
+2. ESP8266 detected over USB (serial port visible).
+3. Basic firmware compiled and flashed successfully.
+4. Logs readable via the ESPHome serial monitor.
+5. Physical wiring documented and validated with continuity/a
+   multimeter if needed.
+6. "Hello world!" text visible on the e-ink panel.
+7. Device connected to the WiFi network.
+8. HA consumption value visible on the panel, updating per the
+   defined refresh strategy.
 
-Cada fase se registra como un issue de GitHub en el repositorio
-`MarceloSalazar/esphome-weact-2.13`, con su criterio de aceptación.
+Each phase is tracked as a GitHub issue in the
+`MarceloSalazar/esphome-weact-2.13` repository, with its acceptance
+criteria.
 
-## Gestión de secretos
+## Secrets management
 
-- `secrets.yaml` (gitignored) contiene `wifi_password` y cualquier
-  otro valor sensible.
-- `secrets.yaml.example` se commitea como plantilla, con valores
-  ficticios.
-- `.gitignore` excluye además `.esphome/` y `.pio/` (directorios de
-  build generados por ESPHome/PlatformIO).
+- `secrets.yaml` (gitignored) holds `wifi_password` and any other
+  sensitive value.
+- `secrets.yaml.example` is committed as a template, with placeholder
+  values.
+- `.gitignore` also excludes `.esphome/` and `.pio/` (build
+  directories generated by ESPHome/PlatformIO).
 
-## Decisiones pendientes (deliberadamente diferidas)
+## Open decisions (deliberately deferred)
 
-- **Modelo exacto de la placa ESP8266** (`board:` en la config):
-  pendiente de confirmar cuando el dispositivo se detecte por USB.
-  Troubleshooting de detección en curso.
-- **`entity_id` del sensor de consumo de la vivienda en Home
-  Assistant**: el usuario indicó que no es prioritario ahora; se
-  resolverá antes de implementar el paso 10 (integración final con
-  HA). Hasta entonces, el YAML usa un placeholder claramente marcado.
-- **Valor exacto de `full_update_every`**: se ajustará empíricamente
-  una vez el panel esté operativo, observando el ghosting real.
+- **Exact ESP8266 board model** (`board:` in the config): pending
+  confirmation once the device is detected over USB. Detection
+  troubleshooting in progress.
+- **`entity_id` of the house-consumption sensor in Home Assistant**:
+  the user indicated this isn't a priority yet; it'll be resolved
+  before implementing step 10 (final HA integration). Until then, the
+  YAML uses a clearly marked placeholder.
+- **Exact `full_update_every` value**: will be tuned empirically once
+  the panel is operational, based on observed ghosting.
 
-## Fuera de alcance
+## Out of scope
 
-- Gestión de energía/batería (el dispositivo se alimenta por USB de
-  forma permanente).
-- Refresco parcial del panel (no soportado de forma fiable por el
-  controlador SSD1680 en modo tricolor).
-- Múltiples pantallas o dispositivos adicionales.
-- Autenticación/token manual de Home Assistant (se usa descubrimiento
-  nativo vía API de ESPHome).
+- Power/battery management (the device is permanently USB-powered).
+- Partial refresh of the panel (not reliably supported by the SSD1680
+  controller in tricolor mode).
+- Multiple displays or additional devices.
+- Manual Home Assistant authentication/token (native discovery via the
+  ESPHome API is used instead).
