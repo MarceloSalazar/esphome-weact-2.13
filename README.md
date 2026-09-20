@@ -239,3 +239,15 @@ of this repository.
 
 [MIT](LICENSE) — free to use, modify, and distribute for any purpose,
 with no warranty and no liability on the author's part.
+
+## AI assistance
+
+This project was developed with substantial assistance from
+[Claude Code](https://claude.com/claude-code) (Anthropic) — from
+initial setup through debugging, hardware bring-up, and the Home
+Assistant integration. Every commit that involved it carries a
+`Co-Authored-By: Claude ...` trailer, so `git log` shows exactly which
+changes were AI-assisted. All design decisions, hardware wiring,
+physical verification, and final review were done by the human author;
+the MIT license's "as is, no warranty" terms apply to the project as a
+whole regardless of how any given part was written.
