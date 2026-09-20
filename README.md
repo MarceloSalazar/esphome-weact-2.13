@@ -234,3 +234,8 @@ of this repository.
 - [x] "Hello world!" on the e-ink panel
 - [x] WiFi (static IP) + encrypted OTA
 - [x] Home Assistant integration (battery status + grid consumption)
+
+## License
+
+[MIT](LICENSE) — free to use, modify, and distribute for any purpose,
+with no warranty and no liability on the author's part.
